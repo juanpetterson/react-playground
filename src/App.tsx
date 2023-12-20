@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useQuery } from '@tanstack/react-query';
 
 import { useCountStore } from './store/zustandStore';
 import { increment } from './store/redux-store/reducers/countReducer';
@@ -7,6 +8,12 @@ import { increment } from './store/redux-store/reducers/countReducer';
 import reactLogo from './assets/react.svg';
 import viteLogo from '/vite.svg';
 import './App.css';
+import { Link } from 'react-router-dom';
+
+type User = {
+  id: number;
+  name: string;
+};
 
 function App() {
   const countRedux = useSelector((state) => state.counter.value);
@@ -14,6 +21,27 @@ function App() {
   const [count, setCount] = useState(0);
   const increaseCount = useCountStore((state) => state.increaseCount);
   const zustandCount = useCountStore((state) => state.count);
+  const [loadUsers, setLoadUsers] = useState(false);
+  const {
+    data: users,
+    status,
+    isLoading: loading,
+  } = useQuery<User[]>({
+    enabled: loadUsers,
+    queryKey: ['users'],
+    queryFn: () => {
+      return new Promise((resolve, reject) => {
+        setTimeout(async () => {
+          const response = await fetch(
+            'https://jsonplaceholder.typicode.com/users'
+          ).then((res) => res.json());
+          resolve(response);
+        }, 2000);
+      });
+    },
+  });
+
+  console.log('status', status, loading);
 
   return (
     <>
@@ -43,6 +71,18 @@ function App() {
       <p className='read-the-docs'>
         Click on the Vite and React logos to learn more
       </p>
+      {/* TODO use suspense */}
+      <section>
+        <p>Users</p>
+        <button onClick={() => setLoadUsers(true)}>Load users</button>
+        {loading && <p>Loading...</p>}
+        <React.Suspense fallback={<p>Loading...</p>}>
+          {users &&
+            users.map((user) => (
+              <Link to={`/users/${user.id}`}>{user.name}</Link>
+            ))}
+        </React.Suspense>
+      </section>
     </>
   );
 }
